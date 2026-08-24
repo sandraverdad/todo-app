@@ -1,26 +1,20 @@
 import express from 'express';
-import env from 'dotenv';
-import bodyParser from 'body-parser';
-import { createClient } from '@supabase/supabase-js';
-
-env.config();
+import database from './config/supabase.js';
 
 const app = express();
 
-const supabase = createClient(process.env.supabaseURL, process.env.supabaseAPI);
-
-app.use(bodyParser.json());
+app.use(express.json());
 
 app.get('/todos', async (req, res) => {
     const { data, error } = await supabase
         .from('todos')
         .select();
     if (error) {
-        res.status(400).json({
-            error: "Bad Request"
+        return res.status(500).json({
+            error: error.message
         });
     } else {
-        res.status(200).json({
+        return res.status(200).json({
             data
         });
     };
@@ -31,18 +25,42 @@ app.get('/todos/:id', async (req, res) => {
         .from('todos')
         .select()
         .eq('id', req.params.id);
+    if (error) {
+        return res.status(500).json({
+            error: error.message
+        });
+    }
     if (data.length === 0) {
-        res.status(404).json({
+        return res.status(404).json({
             error: "Task not found"
         });
-    } else {
-        res.status(200).json({
-            data
-        });
     };
+    res.status(200).json({
+        data
+        });
 })
 
 app.post('/todos', async (req, res) => {
+    if (!req.body.task) {
+        return res.status(400).json({
+            error: "Task is required."
+        });
+    };
+    if (typeof req.body.task !== 'string') {
+        return res.status(400).json({
+            error: "Task must be a text or a string."
+        });
+    };
+    if (req.body.status === undefined) {
+        return res.status(400).json({
+            error: "Status is required."
+        })
+    };
+    if (typeof req.body.status !== 'boolean') {
+        return res.status(400).json({
+            error: "Status must be boolean."
+        })
+    };
     const { data, error } = await supabase
         .from('todos')
         .insert({
@@ -50,31 +68,35 @@ app.post('/todos', async (req, res) => {
             status: req.body.status
         })
         .select();
-    if (!req.body.task) {
-        res.status(400).json({
-            error: "Task is required."
+    if (error) {
+        return res.status(500).json({
+            error: error.message
         });
-    };
-    if (typeof req.body.task !== 'string') {
-        res.status(406).json({
-            error: "Task must be a text or a string."
-        });
-    };
-    if (req.body.status === undefined) {
-        res.status(400).json({
-            error: "Status is required."
-        })
-    };
-    if (typeof req.body.status !== 'boolean') {
-        res.status(406).json({
-            error: "Status must be boolean."
-        })
-    } else {
-        res.status(201).send(`New Task with ID#${data[0].id} had been added containing ${data[0].task} with status ${data[0].status}.`);
-    };
+    }
+    res.status(201).json({
+        message: "Added new task successfully.",
+        data: data[0]
+    });
 });
 
 app.patch('/todos/:id', async (req, res) => {
+    if (req.body.task !== undefined) {
+        if (typeof req.body.task !== 'string') {
+        res.status(400).json({
+            error: "Task must be a text or a string."
+        })
+    }};
+    if (req.body.status !== undefined) {
+        if (typeof req.body.status !== 'boolean') {
+        res.status(400).json({
+            error: "Status must be boolean."
+        })
+    }};
+    if (req.body.task === undefined && req.body.status === undefined) {
+        return res.status(400).json({
+            error: "At least one field must be provided."
+        })
+    }
     const { data, error } = await supabase
         .from('todos')
         .update({
@@ -82,22 +104,20 @@ app.patch('/todos/:id', async (req, res) => {
             status: req.body.status
         })
         .eq('id', req.params.id)
-    if (req.body.task !== undefined) {
-        if (typeof req.body.task !== 'string') {
-        res.status(406).json({
-            error: "Task must be a text or a string."
-        })
-    }};
-    if (req.body.status !== undefined) {
-        if (typeof req.body.status !== 'boolean') {
-        res.status(406).json({
-            error: "Status must be boolean."
-        })
+    if (error) {
+        return res.status(500).json({
+            error: error.message
+        });
     }
-    
-    } else {
-        res.send(`Task with ID #${req.params.id} has been updated.`);
-    };
+    if (data.length === 0) {
+    return res.status(404).json({
+        error: "Task not found"
+    });
+    }
+    res.status(200).json({
+        message: "Updated task successfully.",
+        data: data[0]
+    });
 });
 
 app.delete('/todos/:id', async (req, res) => {
@@ -106,10 +126,18 @@ app.delete('/todos/:id', async (req, res) => {
         .delete()
         .eq('id', req.params.id)
     if (error) {
-        res.send(error);
-    } else {
-        res.send(`Task #${req.params.id} has been successfully removed`);
-    };
+        return res.status(500).json({
+            error: error.message
+        });
+    }
+    if (data.length === 0) {
+    return res.status(404).json({
+        error: "Task not found"
+    });
+    }
+    res.status(200).json({
+        message: "Deleted task successfully."
+    });
 })
 
 app.get('/', (req, res) => {
