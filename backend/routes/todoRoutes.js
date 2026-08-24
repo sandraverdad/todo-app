@@ -3,7 +3,7 @@ import supabase from '../config/supabase.js';
 
 const router = express.Router();
 
-router.get('/todos', async (req, res) => {
+router.get('/', async (req, res) => {
     const { data, error } = await supabase
         .from('todos')
         .select();
@@ -17,7 +17,7 @@ router.get('/todos', async (req, res) => {
         });
 });
 
-router.get('/todos/:id', async (req, res) => {
+router.get('/:id', async (req, res) => {
     const { data, error } = await supabase
         .from('todos')
         .select()
@@ -37,7 +37,7 @@ router.get('/todos/:id', async (req, res) => {
         });
 })
 
-router.post('/todos', async (req, res) => {
+router.post('/', async (req, res) => {
     if (!req.body.task) {
         return res.status(400).json({
             error: "Task is required."
@@ -76,7 +76,7 @@ router.post('/todos', async (req, res) => {
     });
 });
 
-router.patch('/todos/:id', async (req, res) => {
+router.patch('/:id', async (req, res) => {
     const updates = {};
     if (req.body.task !== undefined) {
         if (typeof req.body.task !== 'string') {
@@ -118,7 +118,7 @@ router.patch('/todos/:id', async (req, res) => {
     });
 });
 
-router.delete('/todos/:id', async (req, res) => {
+router.delete('/:id', async (req, res) => {
     const { data, error } = await supabase
         .from('todos')
         .delete()
