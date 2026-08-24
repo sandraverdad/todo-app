@@ -1,5 +1,5 @@
 import express from 'express';
-import database from './config/supabase.js';
+import supabase from './config/supabase.js';
 
 const app = express();
 
@@ -13,11 +13,10 @@ app.get('/todos', async (req, res) => {
         return res.status(500).json({
             error: error.message
         });
-    } else {
-        return res.status(200).json({
-            data
+    }
+    res.status(200).json({
+        data
         });
-    };
 });
 
 app.get('/todos/:id', async (req, res) => {
@@ -80,18 +79,21 @@ app.post('/todos', async (req, res) => {
 });
 
 app.patch('/todos/:id', async (req, res) => {
+    const updates = {};
     if (req.body.task !== undefined) {
         if (typeof req.body.task !== 'string') {
-        res.status(400).json({
-            error: "Task must be a text or a string."
-        })
-    }};
+            return res.status(400).json({
+                error: "Task must be a text or a string."
+        })}
+        updates.task = req.body.task;
+    };
     if (req.body.status !== undefined) {
         if (typeof req.body.status !== 'boolean') {
-        res.status(400).json({
-            error: "Status must be boolean."
-        })
-    }};
+            return res.status(400).json({
+                error: "Status must be boolean."
+        })}
+        updates.status = req.body.status;
+    };
     if (req.body.task === undefined && req.body.status === undefined) {
         return res.status(400).json({
             error: "At least one field must be provided."
@@ -99,19 +101,17 @@ app.patch('/todos/:id', async (req, res) => {
     }
     const { data, error } = await supabase
         .from('todos')
-        .update({
-            task: req.body.task,
-            status: req.body.status
-        })
+        .update(updates)
         .eq('id', req.params.id)
+        .select();
     if (error) {
         return res.status(500).json({
             error: error.message
         });
     }
     if (data.length === 0) {
-    return res.status(404).json({
-        error: "Task not found"
+        return res.status(404).json({
+            error: "Task not found"
     });
     }
     res.status(200).json({
@@ -125,14 +125,15 @@ app.delete('/todos/:id', async (req, res) => {
         .from('todos')
         .delete()
         .eq('id', req.params.id)
+        .select();
     if (error) {
         return res.status(500).json({
             error: error.message
         });
     }
     if (data.length === 0) {
-    return res.status(404).json({
-        error: "Task not found"
+        return res.status(404).json({
+            error: "Task not found"
     });
     }
     res.status(200).json({
